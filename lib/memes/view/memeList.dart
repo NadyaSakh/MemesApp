@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/memes/memes.dart';
+import 'package:myapp/memes/widgets/bottomLoader.dart';
+import 'package:myapp/memes/widgets/refreshButton.dart';
 
 class MemeList extends StatefulWidget {
   const MemeList({Key? key}) : super(key: key);
@@ -9,42 +12,12 @@ class MemeList extends StatefulWidget {
 }
 
 class _MemesState extends State<MemeList> {
-  late Future<Memes> _futureMemes;
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _futureMemes = fetchMemes();
-  }
-
-  Widget _buildMemes() {
-    return Center(
-      child: FutureBuilder<Memes>(
-        future: _futureMemes,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return _buildList(snapshot.data!.memes);
-          } else if (snapshot.hasError) {
-            return Text('${snapshot.error}');
-          }
-
-          // By default, show a loading spinner.
-          return const CircularProgressIndicator();
-        },
-      ),
-    );
-  }
-
-  Widget _buildList(List<Meme> memes) {
-    if (memes == null) {
-      return Container();
-    }
-    return ListView.builder(
-        itemCount: memes.length,
-        padding: const EdgeInsets.all(16.0),
-        itemBuilder: (context, index) {
-          return _buildRow(memes[index]);
-        });
+    _scrollController.addListener(_onScroll);
   }
 
   Widget _buildRow(Meme meme) {
@@ -56,25 +29,62 @@ class _MemesState extends State<MemeList> {
     );
   }
 
-  void _refreshData() {
-    setState(() {
-      _futureMemes = fetchMemes();
-    });
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MemesBloc, MemesState>(
+      builder: (context, state) {
+        switch (state.status) {
+          case MemesStatus.failure:
+            return Stack(
+              children: const [
+                Center(
+                    child: Text('Failed to fetch memes. Please, try again.')),
+                RefreshButton(),
+              ],
+            );
+          case MemesStatus.success:
+            if (state.memes.isEmpty) {
+              return const Center(child: Text('No memes.'));
+            }
+            return Stack(
+              children: [
+                ListView.builder(
+                  itemBuilder: (BuildContext context, int index) {
+                    return index >= state.memes.length
+                        ? const BottomLoader()
+                        : _buildRow(state.memes[index]);
+                  },
+                  itemCount: state.hasReachedMax
+                      ? state.memes.length
+                      : state.memes.length + 1,
+                  controller: _scrollController,
+                ),
+                const RefreshButton(),
+              ],
+            );
+          default:
+            return const Center(child: CircularProgressIndicator());
+        }
+      },
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: const Text('Memes'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _refreshData,
-              tooltip: 'Refresh memes',
-            ),
-          ],
-        ),
-        body: _buildMemes());
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isBottom) context.read<MemesBloc>().add(MemesFetched());
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
   }
 }

@@ -1,4 +1,6 @@
-class Meme {
+import 'package:equatable/equatable.dart';
+
+class Meme extends Equatable {
   final String postLink;
   final String subreddit;
   final String title;
@@ -9,17 +11,16 @@ class Meme {
   final int ups;
   final List<dynamic> preview;
 
-  const Meme({
-        required this.postLink,
-        required this.subreddit,
-        required this.title,
-        required this.url,
-        required this.nsfw,
-        required this.spoiler,
-        required this.author,
-        required this.ups,
-        required this.preview
-  });
+  const Meme(
+      {required this.postLink,
+      required this.subreddit,
+      required this.title,
+      required this.url,
+      required this.nsfw,
+      required this.spoiler,
+      required this.author,
+      required this.ups,
+      required this.preview});
 
   factory Meme.fromJson(Map<String, dynamic> json) {
     return Meme(
@@ -33,4 +34,8 @@ class Meme {
         ups: json['ups'],
         preview: json['preview']);
   }
+
+  @override
+  List<Object> get props =>
+      [postLink, subreddit, title, url, nsfw, spoiler, author, ups, preview];
 }
