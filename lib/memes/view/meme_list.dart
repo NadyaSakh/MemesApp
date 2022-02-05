@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myapp/memes/memes.dart';
-import 'package:myapp/memes/widgets/bottomLoader.dart';
-import 'package:myapp/memes/widgets/refreshButton.dart';
+import 'package:myapp/memes/widgets/bottom_loader.dart';
+import 'package:myapp/memes/widgets/refresh_button.dart';
 
 class MemeList extends StatefulWidget {
   const MemeList({Key? key}) : super(key: key);
