@@ -1,4 +1,4 @@
-part of 'memesBloc.dart';
+part of 'memes_bloc.dart';
 
 enum MemesStatus { initial, success, failure, refreshing }
 

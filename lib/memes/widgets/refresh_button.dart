@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/memes/bloc/memesBloc.dart';
+import 'package:myapp/memes/bloc/memes_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RefreshButton extends StatelessWidget {
@@ -17,7 +17,7 @@ class RefreshButton extends StatelessWidget {
         child: Align(
             alignment: Alignment.bottomRight,
             child: FloatingActionButton(
-              child: Icon(Icons.refresh),
+              child: const Icon(Icons.refresh),
               onPressed: _refreshData,
             )));
   }

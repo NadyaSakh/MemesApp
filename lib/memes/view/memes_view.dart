@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/memes/memes.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
+import 'package:myapp/memes/utils/dio_client.dart';
 
 class MemesView extends StatelessWidget {
   const MemesView({Key? key}) : super(key: key);
@@ -12,7 +12,7 @@ class MemesView extends StatelessWidget {
         appBar: AppBar(title: const Text('Memes')),
         body: BlocProvider(
           create: (_) =>
-              MemesBloc(httpClient: http.Client())..add(MemesFetched()),
+              MemesBloc(client: DioClient())..add(MemesFetched()),
           child: const MemeList(),
         ));
   }

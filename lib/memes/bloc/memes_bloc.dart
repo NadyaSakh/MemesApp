@@ -1,20 +1,17 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myapp/memes/models/meme.dart';
-import 'package:http/http.dart' as http;
-import 'package:myapp/memes/models/memes.dart';
+import 'package:myapp/memes/utils/dio_client.dart';
 import 'package:stream_transform/stream_transform.dart';
 
-part 'memesEvent.dart';
+part 'memes_event.dart';
 
-part 'memesState.dart';
+part 'memes_state.dart';
 
 const _memesPortionCount = 10;
-const _maxFetchCount = 200;
+const _maxFetchCount = 100;
 
 const throttleDuration = Duration(microseconds: 100);
 
@@ -25,7 +22,7 @@ EventTransformer<E> throttleDroppable<E>(Duration duration) {
 }
 
 class MemesBloc extends Bloc<MemesEvent, MemesState> {
-  MemesBloc({required this.httpClient}) : super(const MemesState()) {
+  MemesBloc({required this.client}) : super(const MemesState()) {
     on<MemesFetched>(
       _onMemesFetched,
       transformer: throttleDroppable(throttleDuration),
@@ -36,7 +33,7 @@ class MemesBloc extends Bloc<MemesEvent, MemesState> {
     );
   }
 
-  final http.Client httpClient;
+  DioClient client = DioClient();
 
   Future<void> _onMemesFetched(
     MemesFetched event,
@@ -45,25 +42,28 @@ class MemesBloc extends Bloc<MemesEvent, MemesState> {
     if (state.hasReachedMax) return;
     try {
       if (state.status == MemesStatus.initial) {
-        final memes = await _fetchMemes();
+        final memes = await client.fetchMemes(_memesPortionCount);
         return emit(state.copyWith(
           status: MemesStatus.success,
           memes: memes,
           hasReachedMax: false,
         ));
       }
-      final memes = await _fetchMemes();
-      final isMaxFetched =
-          state.memes.length + _memesPortionCount > _maxFetchCount;
-      isMaxFetched
-          ? emit(state.copyWith(hasReachedMax: true))
-          : emit(
-              state.copyWith(
-                status: MemesStatus.success,
-                memes: List.of(state.memes)..addAll(memes),
-                hasReachedMax: false,
-              ),
-            );
+
+      final isMaxFetched = state.memes.length >= _maxFetchCount;
+
+      if (isMaxFetched) {
+        emit(state.copyWith(hasReachedMax: true));
+      } else {
+        final memes = await client.fetchMemes(_memesPortionCount);
+        emit(
+          state.copyWith(
+            status: MemesStatus.success,
+            memes: List.of(state.memes)..addAll(memes),
+            hasReachedMax: false,
+          ),
+        );
+      }
     } catch (_) {
       emit(state.copyWith(status: MemesStatus.failure));
     }
@@ -80,7 +80,7 @@ class MemesBloc extends Bloc<MemesEvent, MemesState> {
         hasReachedMax: false,
       ));
 
-      final memes = await _fetchMemes();
+      final memes = await client.fetchMemes(_memesPortionCount);
       return emit(state.copyWith(
         status: MemesStatus.success,
         memes: memes,
@@ -89,17 +89,5 @@ class MemesBloc extends Bloc<MemesEvent, MemesState> {
     } catch (_) {
       emit(state.copyWith(status: MemesStatus.failure));
     }
-  }
-
-  Future<List<Meme>> _fetchMemes() async {
-    final response = await httpClient.get(
-      Uri.https('meme-api.herokuapp.com', '/gimme/$_memesPortionCount'),
-    );
-    if (response.statusCode == 200) {
-      final body = Memes.fromJson(jsonDecode(response.body));
-      return body.memes;
-    }
-
-    throw Exception('Error fetching memes');
   }
 }

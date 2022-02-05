@@ -1,2 +1,2 @@
-export 'memesView.dart';
-export 'memeList.dart';
+export 'memes_view.dart';
+export 'meme_list.dart';
